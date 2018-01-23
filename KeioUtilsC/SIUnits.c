@@ -71,7 +71,7 @@ void ToSIUnitsDouble(char *s, double v, char *format, double margin, char minimu
 	unit_str[0] = unit_char;
 	strcat(s, unit_str);
 }
-
+/*
 void ToSIUnitsLong(char *s, long v, long margin, char minimum_unit)
 {
 //	ToSIUnitsDouble(s, (double)v, format, (double)margin, minimum_unit);
@@ -136,7 +136,7 @@ void ToSIUnitsLongS(char *s, long v)
 {
 	ToSIUnitsDouble(s, (double)v, "%lf", (double)SetMargin, SetMinimumUnit);
 }
-
+*/
 bool SetSIFormat(char *format, char minimum_unit, double margin)
 {
 	if (strlen(format) > sizeof(SetFormatF))
