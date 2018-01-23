@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include "crc.h"
 
-//#define USE_LOOKUP_TABLES
+#define USE_LOOKUP_TABLES
 
 uint8_t crc8_initial = 0;
 uint8_t crc8_poly = 0x1D;
@@ -138,6 +138,12 @@ uint32_t crc32(const void *buffer, unsigned int buffer_length)
 	return crc32_final_xor ^ (crc32_reverse_output ? reverse32(crc) : crc);
 }
 
+/**************************************************************************************************
+* Not required for non-lookup table versions
+*/
+void crc_init(void)
+{}
+
 #else
 const uint8_t bit_reversal_table[] =
 {
@@ -159,6 +165,10 @@ const uint8_t bit_reversal_table[] =
 	0x0F, 0x8F, 0x4F, 0xCF, 0x2F, 0xAF, 0x6F, 0xEF, 0x1F, 0x9F, 0x5F, 0xDF, 0x3F, 0xBF, 0x7F, 0xFF
 };
 
+uint8_t crc8_lut[256];
+uint16_t crc16_lut[256];
+uint32_t crc32_lut[256];
+
 inline uint8_t reverse8(uint8_t x)
 {
 	return bit_reversal_table[x];
@@ -171,12 +181,138 @@ inline uint16_t reverse16(uint16_t x)
 
 inline uint32_t reverse32(uint32_t x)
 {
-	const uint8_t *p = (uint8_t *)x;
+	const uint8_t *p = (uint8_t *)&x;
 	return	bit_reversal_table[p[3]] |
 			(bit_reversal_table[p[2]] << 8) |
 			(bit_reversal_table[p[1]] << 16) |
 			(bit_reversal_table[p[0]] << 24);
 }
+
+/**************************************************************************************************
+* Generate lookup table for CRC8
+*/
+void crc8_calculate_table(void)
+{
+	uint8_t i = 0;
+	do
+	{
+		uint8_t byte = i;
+		for (uint8_t bit = 0; bit < 8; bit++)
+		{
+			if (byte & 0x80)
+				byte = (byte << 1) ^ crc8_poly;
+			else
+				byte <<= 1;
+		}
+		crc8_lut[i] = byte;
+	} while (++i);
+}
+
+/**************************************************************************************************
+* CRC8
+*/
+uint8_t crc8(const void *buffer, unsigned int buffer_length)
+{
+	uint8_t crc = crc8_initial;
+	uint8_t *ptr = (uint8_t *)buffer;
+
+	while (buffer_length--)
+		crc = crc8_lut[*ptr++ ^ crc];
+	return crc;
+}
+
+/**************************************************************************************************
+* Generate lookup table for CRC16
+*/
+void crc16_calculate_table(void)
+{
+	uint8_t i = 0;
+	do
+	{
+		uint16_t word = (uint16_t)i << 8;
+		for (uint8_t bit = 0; bit < 8; bit++)
+		{
+			if (word & 0x8000)
+				word = (word << 1) ^ crc16_poly;
+			else
+				word <<= 1;
+		}
+		crc16_lut[i] = word;
+	} while (++i);
+}
+
+/**************************************************************************************************
+* CRC16
+*/
+uint16_t crc16(const void *buffer, unsigned int buffer_length)
+{
+	uint16_t crc = crc16_initial;
+	uint8_t *ptr = (uint8_t *)buffer;
+
+	if (crc16_reverse_input)
+	{
+		while (buffer_length--)
+			crc = (crc << 8) ^ (crc16_lut[(crc >> 8) ^ reverse8(*ptr++)]);
+	}
+	else
+	{
+		while (buffer_length--)
+			crc = (crc << 8) ^ (crc16_lut[(crc >> 8) ^ *ptr++]);
+	}
+	return crc16_reverse_output ? reverse16(crc) : crc;
+}
+
+/**************************************************************************************************
+* Generate lookup table for CRC32
+*/
+void crc32_calculate_table(void)
+{
+	uint8_t i = 0;
+	do
+	{
+		uint32_t word = (uint32_t)i << 24;
+		for (uint8_t bit = 0; bit < 8; bit++)
+		{
+			if (word & 0x80000000)
+				word = (word << 1) ^ crc32_poly;
+			else
+				word <<= 1;
+		}
+		crc32_lut[i] = word;
+	} while (++i);
+}
+
+/**************************************************************************************************
+* CRC32
+*/
+uint32_t crc32(const void *buffer, unsigned int buffer_length)
+{
+	uint32_t crc = crc32_initial;
+	uint8_t *ptr = (uint8_t *)buffer;
+
+	if (crc32_reverse_input)
+	{
+		while (buffer_length--)
+			crc = (crc << 8) ^ (crc32_lut[(crc >> 24) ^ reverse8(*ptr++)]);
+	}
+	else
+	{
+		while (buffer_length--)
+			crc = (crc << 8) ^ (crc32_lut[(crc >> 24) ^ *ptr++]);
+	}
+	return crc32_final_xor ^ (crc32_reverse_output ? reverse32(crc) : crc);
+}
+
+/**************************************************************************************************
+* Generate lookup tables
+*/
+void crc_init(void)
+{
+	crc8_calculate_table();
+	crc16_calculate_table();
+	crc32_calculate_table();
+}
+
 #endif
 
 
