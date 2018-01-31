@@ -24,12 +24,18 @@
     <ClCompile Include="crc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="intel_hex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SIUnits.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="crc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="intel_hex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

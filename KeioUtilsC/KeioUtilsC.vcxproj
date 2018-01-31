@@ -144,11 +144,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="crc.c" />
+    <ClCompile Include="intel_hex.c" />
     <ClCompile Include="KeioUtilsC.c" />
     <ClCompile Include="SIUnits.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="crc.h" />
+    <ClInclude Include="intel_hex.h" />
     <ClInclude Include="SIUnits.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
