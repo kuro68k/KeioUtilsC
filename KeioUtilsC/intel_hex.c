@@ -14,7 +14,7 @@ uint32_t firmware_size = 0;
 char last_error[128] = "None";
 
 
-uint32_t ReadBase16(char *c, int num_chars)
+uint32_t read_base16(char *c, int num_chars)
 {
 	uint32_t val = 0;
 
@@ -28,7 +28,7 @@ uint32_t ReadBase16(char *c, int num_chars)
 }
 
 // load an Intel hex file into buffer
-bool ReadHexFile(char *filename, uint8_t *buffer, unsigned int buffer_size)
+bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size)
 {
 	FILE *fp;
 	bool res = true;
@@ -61,11 +61,11 @@ bool ReadHexFile(char *filename, uint8_t *buffer, unsigned int buffer_size)
 		}
 
 		char *c = &line[1];
-		uint8_t len = ReadBase16(c, 2);
+		uint8_t len = read_base16(c, 2);
 		c += 2;
-		uint16_t addr = ReadBase16(c, 4);
+		uint16_t addr = read_base16(c, 4);
 		c += 4;
-		uint8_t type = ReadBase16(c, 2);
+		uint8_t type = read_base16(c, 2);
 		c += 2;
 
 		//printf("%u\t%X\t%u\n", len, addr, type);
@@ -82,7 +82,7 @@ bool ReadHexFile(char *filename, uint8_t *buffer, unsigned int buffer_size)
 					res = false;
 					goto exit;
 				}
-				buffer[absadr] = ReadBase16(c, 2);
+				buffer[absadr] = read_base16(c, 2);
 				c += 2;
 				if (absadr > firmware_size)
 					firmware_size = absadr;
@@ -96,12 +96,12 @@ bool ReadHexFile(char *filename, uint8_t *buffer, unsigned int buffer_size)
 				res = false;
 				break;
 			}
-			base_addr = ReadBase16(c, 4) << 4;
+			base_addr = read_base16(c, 4) << 4;
 			//printf("%u:\tbase_addr = %X\n", line_num, base_addr);
 			c += 4;
 		}
 
-		uint8_t checksum = ReadBase16(c, 2);
+		uint8_t checksum = read_base16(c, 2);
 		// todo: check checksum
 
 		if (res != true)
