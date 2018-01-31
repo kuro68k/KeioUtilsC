@@ -153,7 +153,7 @@ uint32_t crc32(const void *buffer, unsigned int buffer_length)
 void crc_init(void)
 {}
 
-#else
+#else // USE_LOOKUP_TABLES
 const uint8_t bit_reversal_table[] =
 {
 	0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0,
@@ -322,7 +322,7 @@ void crc_init(void)
 	crc32_calculate_table();
 }
 
-#endif
+#endif // ifndef USE_LOOKUP_TABLES
 
 /**************************************************************************************************
 * XMEGA NVM compatible CRC32
