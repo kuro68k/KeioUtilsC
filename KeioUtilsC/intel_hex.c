@@ -1,4 +1,6 @@
-// intel_hex.cpp
+/*	intel_hex.cpp
+	Read Intel HEX format images into memory.
+*/
 
 #include <stdio.h>
 #include <string.h>
@@ -6,13 +8,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "intel_hex.h"
-#include "crc.h"
 
 
-uint32_t firmware_crc = 0;
-uint32_t firmware_size = 0;
 char last_error[128] = "None";
 
+char* ihex_get_last_error(void)
+{
+	return last_error;
+}
 
 uint32_t read_base16(char *c, int num_chars)
 {
@@ -27,11 +30,17 @@ uint32_t read_base16(char *c, int num_chars)
 	return val;
 }
 
-// load an Intel hex file into buffer
-bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size)
+/*	Load an Intel hex file into buffer. If buffer is NULL nothing is written, allowing you to check
+	the size via *image_size before allocating enough memory to hold it. buffer_size is always checked
+	even if buffer is NULL.
+*/
+bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size, uint32_t *image_size)
 {
 	FILE *fp;
 	bool res = true;
+
+	if (image_size != NULL)
+		*image_size = 0;
 
 	fp = fopen(filename, "r");
 	if (fp == NULL)
@@ -41,12 +50,14 @@ bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size)
 	}
 	//quiet_printf("Loading %s...\n", filename);
 
-	memset(buffer, 0xFF, buffer_size);
+	if (buffer != NULL)
+		memset(buffer, 0xFF, buffer_size);
 	uint32_t	base_addr = 0;
 
 	int line_num = 0;
 	while (feof(fp) != EOF)
 	{
+		uint8_t checksum = 0;
 		line_num++;
 		char line[1024];
 		if (fgets(line, sizeof(line), fp) == NULL)
@@ -68,6 +79,7 @@ bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size)
 		uint8_t type = read_base16(c, 2);
 		c += 2;
 
+		checksum = len + (addr >> 8) + (addr & 0xFF) + type;
 		//printf("%u\t%X\t%u\n", len, addr, type);
 
 		switch (type)
@@ -76,16 +88,22 @@ bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size)
 			for (uint16_t i = 0; i < len; i++)
 			{
 				uint32_t absadr = base_addr + (addr++);
-				if (absadr > buffer_size)
+				if (absadr >= buffer_size)
 				{
 					snprintf(last_error, sizeof(last_error), "Firmware image too large for buffer (%X).\n", absadr);
 					res = false;
 					goto exit;
 				}
-				buffer[absadr] = read_base16(c, 2);
+				uint8_t b = read_base16(c, 2);
+				checksum += b;
+				if (buffer != NULL)
+					buffer[absadr] = b;
 				c += 2;
-				if (absadr > firmware_size)
-					firmware_size = absadr;
+				if (image_size != NULL)
+				{
+					if (absadr > *image_size)
+						*image_size = absadr;
+				}
 			}
 			break;
 
@@ -97,17 +115,28 @@ bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size)
 				break;
 			}
 			base_addr = read_base16(c, 4) << 4;
+			checksum += (base_addr >> 8) + (base_addr & 0xFF);
 			//printf("%u:\tbase_addr = %X\n", line_num, base_addr);
 			c += 4;
 		}
 
-		uint8_t checksum = read_base16(c, 2);
-		// todo: check checksum
+		uint8_t cc = read_base16(c, 2);
+		checksum = ~checksum + 1;
+		if (cc != checksum)
+		{
+			snprintf(last_error, sizeof(last_error),
+					 "Checksum mismatch on line %d (read %02X, calculated %02X)\n",
+					 line_num, cc, checksum);
+			res = false;
+			break;
+		}
 
 		if (res != true)
 			break;
 	}
 
+	if (image_size != NULL)
+		(*image_size)++;	// size is highest address + 1
 	//quiet_printf("Firmware size:\t%u bytes (0x%X)\n", firmware_size, firmware_size);
 
 exit:
