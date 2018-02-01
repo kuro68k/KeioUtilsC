@@ -9,14 +9,18 @@
 #include <stdbool.h>
 #include "intel_hex.h"
 
-
 char last_error[128] = "None";
 
+
+/*	Get the last error message
+*/
 char* ihex_get_last_error(void)
 {
 	return last_error;
 }
 
+/*	Read char hexedecimal numbers and return up to 32 bits
+*/
 uint32_t read_base16(char *c, int num_chars)
 {
 	uint32_t val = 0;
@@ -38,6 +42,7 @@ bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size, u
 {
 	FILE *fp;
 	bool res = true;
+	bool eof_marker_found = false;
 
 	if (image_size != NULL)
 		*image_size = 0;
@@ -45,7 +50,7 @@ bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size, u
 	fp = fopen(filename, "r");
 	if (fp == NULL)
 	{
-		snprintf(last_error, sizeof(last_error), "Unable to open %s.\n", filename);
+		snprintf(last_error, sizeof(last_error), "Unable to open %s", filename);
 		return false;
 	}
 	//quiet_printf("Loading %s...\n", filename);
@@ -55,7 +60,7 @@ bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size, u
 	uint32_t	base_addr = 0;
 
 	int line_num = 0;
-	while (feof(fp) != EOF)
+	while ((feof(fp) != EOF) && res)
 	{
 		uint8_t checksum = 0;
 		line_num++;
@@ -66,7 +71,7 @@ bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size, u
 
 		if (line[0] != ':')
 		{
-			snprintf(last_error, sizeof(last_error), "Invalid line %d (missing colon)\n", line_num);
+			snprintf(last_error, sizeof(last_error), "Invalid line %d (missing colon)", line_num);
 			res = false;
 			break;
 		}
@@ -84,62 +89,75 @@ bool ihex_read_file(char *filename, uint8_t *buffer, unsigned int buffer_size, u
 
 		switch (type)
 		{
-		case 0:		// data record
-			for (uint16_t i = 0; i < len; i++)
-			{
-				uint32_t absadr = base_addr + (addr++);
-				if (absadr >= buffer_size)
+			case 0:		// data record
+				for (uint16_t i = 0; i < len; i++)
 				{
-					snprintf(last_error, sizeof(last_error), "Firmware image too large for buffer (%X).\n", absadr);
-					res = false;
-					goto exit;
+					uint32_t absadr = base_addr + (addr++);
+					if (absadr >= buffer_size)
+					{
+						snprintf(last_error, sizeof(last_error), "Firmware image too large for buffer (%X)", absadr);
+						res = false;
+						break;
+					}
+					uint8_t b = read_base16(c, 2);
+					checksum += b;
+					if (buffer != NULL)
+						buffer[absadr] = b;
+					c += 2;
+					if (image_size != NULL)
+					{
+						if (absadr > *image_size)
+							*image_size = absadr;
+					}
 				}
-				uint8_t b = read_base16(c, 2);
-				checksum += b;
-				if (buffer != NULL)
-					buffer[absadr] = b;
-				c += 2;
-				if (image_size != NULL)
-				{
-					if (absadr > *image_size)
-						*image_size = absadr;
-				}
-			}
-			break;
+				break;
 
-		case 2:		// extended segment address record
-			if (len != 2)
-			{
-				snprintf(last_error, sizeof(last_error), "Invalid line %d (bad extended segment address length: %u)\n", line_num, len);
+			case 1:		// end of file marker
+				eof_marker_found = true;
+				break;
+
+			case 2:		// extended segment address record
+				if (len != 2)
+				{
+					snprintf(last_error, sizeof(last_error), "Invalid line %d (bad extended segment address length: %u)", line_num, len);
+					res = false;
+					break;
+				}
+				base_addr = read_base16(c, 4) << 4;
+				checksum += (base_addr >> 8) + (base_addr & 0xFF);
+				//printf("%u:\tbase_addr = %X\n", line_num, base_addr);
+				c += 4;
+				break;
+
+			default:
+				snprintf(last_error, sizeof(last_error), "Unknown record type %u on line %d", type, line_num);
 				res = false;
 				break;
-			}
-			base_addr = read_base16(c, 4) << 4;
-			checksum += (base_addr >> 8) + (base_addr & 0xFF);
-			//printf("%u:\tbase_addr = %X\n", line_num, base_addr);
-			c += 4;
-		}
+		} // switch
+		if (res != true)
+			break;
 
 		uint8_t cc = read_base16(c, 2);
 		checksum = ~checksum + 1;
 		if (cc != checksum)
 		{
 			snprintf(last_error, sizeof(last_error),
-					 "Checksum mismatch on line %d (read %02X, calculated %02X)\n",
+					 "Checksum mismatch on line %d (read %02X, calculated %02X)",
 					 line_num, cc, checksum);
 			res = false;
 			break;
 		}
-
-		if (res != true)
-			break;
-	}
+	} // while
 
 	if (image_size != NULL)
 		(*image_size)++;	// size is highest address + 1
-	//quiet_printf("Firmware size:\t%u bytes (0x%X)\n", firmware_size, firmware_size);
 
-exit:
+	if (res && !eof_marker_found)	// okay except for missing EOF marker
+	{
+		snprintf(last_error, sizeof(last_error), "End of file marker not found");
+		res = false;
+	}
+
 	fclose(fp);
 	return res;
 }
