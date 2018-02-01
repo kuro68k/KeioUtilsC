@@ -27,6 +27,9 @@
     <ClCompile Include="intel_hex.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cmdargs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SIUnits.h">
@@ -36,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="intel_hex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cmdargs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
