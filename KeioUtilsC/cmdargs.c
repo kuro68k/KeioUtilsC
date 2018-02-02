@@ -53,8 +53,8 @@ const CMDARGUMENT_t arg_list[] = {
 #define	NUM_ARGS	(sizeof(arg_list) / sizeof(arg_list[0]))
 
 const CMDOPTION_t opt_list[] = {
-	{ { &float_test, ARGTYPE_INT32, "float_opt", "optional float", false }, 'f', "float" },
-	{ { &char_test, ARGTYPE_STRING, "char_opt", "optional char", false }, 'c', "char" },
+	{ { &float_test, ARGTYPE_FLOAT, "float_opt", "optional float", true }, 'f', "float" },
+	{ { &char_test, ARGTYPE_CHAR, "char_opt", "optional char", false }, 'c', "char" },
 };
 #define	NUM_OPTS	(sizeof(opt_list) / sizeof(opt_list[0]))
 
@@ -149,6 +149,15 @@ bool parse(char *arg, uint8_t type, void *target)
 			*(double *)target = vd;
 			break;
 
+		case ARGTYPE_CHAR:
+			if (strlen(arg) > 1)
+			{
+				printf("Argument \"%s\" too long (max 1 character).\n", arg);
+				return false;
+			}
+			*(char *)target = arg[0];
+			break;
+
 		case ARGTYPE_STRING:
 			*(char **)target = arg;
 			break;
@@ -163,8 +172,8 @@ bool parse(char *arg, uint8_t type, void *target)
 bool cmdargs_parse(int argc, char *argv[])
 {
 	bool consumed[256] = { false };
-	bool found_args[NUM_ARGS];
-	bool found_opts[NUM_OPTS];
+	bool found_args[NUM_ARGS] = { false };
+	bool found_opts[NUM_OPTS] = { false };
 
 	int i, count;
 	printf("argc: %d\n", argc);
@@ -176,7 +185,7 @@ bool cmdargs_parse(int argc, char *argv[])
 	{
 		if ((argv[i][0] != '-' && argv[i][0] != '/'))
 			continue;
-		printf("opt: \"%s\"\n", argv[i]);
+		//printf("opt: \"%s\"\n", argv[i]);
 
 		size_t len = strlen(argv[i]);
 		if (len == 1)
@@ -216,16 +225,18 @@ bool cmdargs_parse(int argc, char *argv[])
 		found_opts[count] = true;
 
 		// parse option
+		consumed[i] = true;
 		if (opt_list[count].arg.type == ARGTYPE_BOOL)
 			*(bool *)opt_list[count].arg.target = true;
 		else
 		{
-			if (i < (argc - 1))	// ran out of arguments
+			if (i >= (argc - 1))	// ran out of arguments
 			{
 				printf("Missing argument for \"%s\".\n", argv[i]);
 				return false;
 			}
 			i++;
+			consumed[i] = true;
 
 			if (!parse(argv[i], opt_list[count].arg.type, opt_list[count].arg.target))
 			{
@@ -242,7 +253,7 @@ bool cmdargs_parse(int argc, char *argv[])
 	{
 		if (consumed[i])		// already consumed
 			continue;
-		printf("arg: \"%s\"\n", argv[i]);
+		//printf("arg: \"%s\"\n", argv[i]);
 
 		if (!parse(argv[i], arg_list[count].type, arg_list[count].target))
 		{
@@ -260,6 +271,14 @@ bool cmdargs_parse(int argc, char *argv[])
 		if (arg_list[i].required && !found_args[i])
 		{
 			printf("Argument \"%s\" is required.\n", arg_list[i].short_description);
+			return false;
+		}
+	}
+	for (i = 0; i < NUM_OPTS; i++)
+	{
+		if (opt_list[i].arg.required && !found_opts[i])
+		{
+			printf("Argument \"%s\" is required.\n", opt_list[i].arg.short_description);
 			return false;
 		}
 	}
