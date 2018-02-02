@@ -43,12 +43,20 @@ typedef struct
 
 int32_t int32_test;
 char	*string;
+float float_test;
+char char_test;
 
 const CMDARGUMENT_t arg_list[] = {
 	{ &int32_test, ARGTYPE_INT32, "int_arg", "integer argument", true },
 	{ &string, ARGTYPE_STRING, "string_arg", "string argument", false },
 };
 #define	NUM_ARGS	(sizeof(arg_list) / sizeof(arg_list[0]))
+
+const CMDOPTION_t opt_list[] = {
+	{ { &float_test, ARGTYPE_INT32, "float_opt", "optional float", false }, 'f', "float" },
+	{ { &char_test, ARGTYPE_STRING, "char_opt", "optional char", false }, 'c', "char" },
+};
+#define	NUM_OPTS	(sizeof(opt_list) / sizeof(opt_list[0]))
 
 
 bool parse(char *arg, uint8_t type, void *target)
@@ -155,12 +163,81 @@ bool parse(char *arg, uint8_t type, void *target)
 bool cmdargs_parse(int argc, char *argv[])
 {
 	bool consumed[256] = { false };
-	bool found[NUM_ARGS];
+	bool found_args[NUM_ARGS];
+	bool found_opts[NUM_OPTS];
 
-	int i;
+	int i, count;
 	printf("argc: %d\n", argc);
 
-	int count = 0;
+	
+	// options
+	count = 0;
+	for (int i = 1; i < argc; i++)
+	{
+		if ((argv[i][0] != '-' && argv[i][0] != '/'))
+			continue;
+		printf("opt: \"%s\"\n", argv[i]);
+
+		size_t len = strlen(argv[i]);
+		if (len == 1)
+		{
+			printf("Option missing from \"%s\".\n", argv[i]);
+			return false;
+		}
+
+		// find option
+		bool match = false;
+		for (count = 0; count < NUM_OPTS; count++)
+		{
+			if (len > 2)
+			{
+				if (strcmp(&argv[i][1], opt_list[count].long_opt) == 0)
+					match = true;
+			}
+			else
+			{
+				if (argv[i][1] == opt_list[count].short_opt)
+					match = true;
+			}
+			if (match)
+				break;
+		}
+		if (!match)
+		{
+			printf("Unknown option \"%s\".\n", argv[i]);
+			return false;
+		}
+
+		if (found_opts[count])	// already seen this option
+		{
+			printf("Duplicate option \"%s\".\n", argv[i]);
+			return false;
+		}
+		found_opts[count] = true;
+
+		// parse option
+		if (opt_list[count].arg.type == ARGTYPE_BOOL)
+			*(bool *)opt_list[count].arg.target = true;
+		else
+		{
+			if (i < (argc - 1))	// ran out of arguments
+			{
+				printf("Missing argument for \"%s\".\n", argv[i]);
+				return false;
+			}
+			i++;
+
+			if (!parse(argv[i], opt_list[count].arg.type, opt_list[count].arg.target))
+			{
+				printf("Unable to parse \"%s\".\n", argv[i]);
+				return false;
+			}
+		}
+	}
+
+	
+	// other arguments
+	count = 0;
 	for (int i = 1; i < argc; i++)
 	{
 		if (consumed[i])		// already consumed
@@ -173,14 +250,14 @@ bool cmdargs_parse(int argc, char *argv[])
 			return false;
 		}
 
-		found[count] = true;
+		found_args[count] = true;
 		count++;
 	}
 
 	// check if all required arguments were found
 	for (i = 0; i < NUM_ARGS; i++)
 	{
-		if (arg_list[i].required && !found[i])
+		if (arg_list[i].required && !found_args[i])
 		{
 			printf("Argument \"%s\" is required.\n", arg_list[i].short_description);
 			return false;
@@ -189,6 +266,8 @@ bool cmdargs_parse(int argc, char *argv[])
 
 	printf("int32_test = %d\n", int32_test);
 	printf("string = \"%s\"\n", string);
+	printf("float_test = \"%f\"\n", float_test);
+	printf("char_test = \"%c\"\n", char_test);
 
 	return true;
 }
