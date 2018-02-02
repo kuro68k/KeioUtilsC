@@ -7,23 +7,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
-
-typedef enum
-{
-	ARGTYPE_INT8,
-	ARGTYPE_INT16,
-	ARGTYPE_INT32,
-	ARGTYPE_INT64,
-	ARGTYPE_UINT8,
-	ARGTYPE_UINT16,
-	ARGTYPE_UINT32,
-	ARGTYPE_UINT64,
-	ARGTYPE_FLOAT,
-	ARGTYPE_DOUBLE,
-	ARGTYPE_CHAR,
-	ARGTYPE_STRING,
-	ARGTYPE_BOOL,
-} ARGTYPE_t;
+#include "cmdargs.h"
 
 typedef struct
 {
@@ -41,20 +25,14 @@ typedef struct
 	char	*long_opt;		// string option name
 } CMDOPTION_t;
 
-int32_t int32_test;
-char	*string;
-float float_test;
-char char_test;
 
 const CMDARGUMENT_t arg_list[] = {
-	{ &int32_test, ARGTYPE_INT32, "int_arg", "integer argument", true },
-	{ &string, ARGTYPE_STRING, "string_arg", "string argument", false },
+	ARGUMENT_TABLE
 };
 #define	NUM_ARGS	(sizeof(arg_list) / sizeof(arg_list[0]))
 
 const CMDOPTION_t opt_list[] = {
-	{ { &float_test, ARGTYPE_FLOAT, "float_opt", "optional float", true }, 'f', "float" },
-	{ { &char_test, ARGTYPE_CHAR, "char_opt", "optional char", false }, 'c', "char" },
+	OPTION_TABLE
 };
 #define	NUM_OPTS	(sizeof(opt_list) / sizeof(opt_list[0]))
 
@@ -282,11 +260,6 @@ bool cmdargs_parse(int argc, char *argv[])
 			return false;
 		}
 	}
-
-	printf("int32_test = %d\n", int32_test);
-	printf("string = \"%s\"\n", string);
-	printf("float_test = \"%f\"\n", float_test);
-	printf("char_test = \"%c\"\n", char_test);
 
 	return true;
 }
