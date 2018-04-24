@@ -30,8 +30,10 @@ extern char	*string;
 	{ &string, ARGTYPE_STRING, "string_arg", "string argument", false },
 
 #define	OPTION_TABLE \
-	{ { &float_test, ARGTYPE_FLOAT, "float_opt", "optional float", true }, 'f', "float" }, \
-	{ { &char_test, ARGTYPE_CHAR, "char_opt", "optional char", false }, 'c', "char" },
+	{ { &float_test, ARGTYPE_FLOAT, "float_opt", "optional float", false }, 'f', "float" }, \
+	{ { &char_test, ARGTYPE_CHAR, "char_opt", "optional char", false }, 'c', "char" }, \
+	{ { &string, ARGTYPE_STRING, "string_opt 123456", "optional string", false }, 's', "string" },
 
 
 extern bool cmdargs_parse(int argc, char *argv[]);
+extern void cmdargs_print_help(char *app_name);

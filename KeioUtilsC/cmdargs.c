@@ -31,10 +31,12 @@ const CMDARGUMENT_t arg_list[] = {
 };
 #define	NUM_ARGS	(sizeof(arg_list) / sizeof(arg_list[0]))
 
+#ifdef OPTION_TABLE
 const CMDOPTION_t opt_list[] = {
 	OPTION_TABLE
 };
 #define	NUM_OPTS	(sizeof(opt_list) / sizeof(opt_list[0]))
+#endif
 
 
 bool parse(char *arg, uint8_t type, void *target)
@@ -44,106 +46,106 @@ bool parse(char *arg, uint8_t type, void *target)
 	double vd = 0;
 	switch (type)
 	{
-		case ARGTYPE_INT8:
-		case ARGTYPE_INT16:
-		case ARGTYPE_INT32:
-		case ARGTYPE_INT64:
-			errno = 0;
-			v64 = strtoll(arg, NULL, 0);
-			if (errno != 0)
-				return false;
-			break;
+	case ARGTYPE_INT8:
+	case ARGTYPE_INT16:
+	case ARGTYPE_INT32:
+	case ARGTYPE_INT64:
+		errno = 0;
+		v64 = strtoll(arg, NULL, 0);
+		if (errno != 0)
+			return false;
+		break;
 
-		case ARGTYPE_UINT8:
-		case ARGTYPE_UINT16:
-		case ARGTYPE_UINT32:
-		case ARGTYPE_UINT64:
-			errno = 0;
-			vu64 = strtoull(arg, NULL, 0);
-			if (errno != 0)
-				return false;
-			break;
+	case ARGTYPE_UINT8:
+	case ARGTYPE_UINT16:
+	case ARGTYPE_UINT32:
+	case ARGTYPE_UINT64:
+		errno = 0;
+		vu64 = strtoull(arg, NULL, 0);
+		if (errno != 0)
+			return false;
+		break;
 
-		case ARGTYPE_FLOAT:
-		case ARGTYPE_DOUBLE:
-			errno = 0;
-			vd = strtod(arg, NULL);
-			if (errno != 0)
-				return false;
-			break;
+	case ARGTYPE_FLOAT:
+	case ARGTYPE_DOUBLE:
+		errno = 0;
+		vd = strtod(arg, NULL);
+		if (errno != 0)
+			return false;
+		break;
 	}
-	
+
 	switch (type)
 	{
-		case ARGTYPE_INT8:
-			if ((v64 < INT8_MIN) || (v64 > INT8_MAX))
-				return false;
-			*(int8_t *)target = (int8_t)v64;
-			break;
-
-		case ARGTYPE_INT16:
-			if ((v64 < INT16_MIN) || (v64 > INT16_MAX))
-				return false;
-			*(int16_t *)target = (int16_t)v64;
-			break;
-
-		case ARGTYPE_INT32:
-			if ((v64 < INT32_MIN) || (v64 > INT32_MAX))
-				return false;
-			*(int32_t *)target = (int32_t)v64;
-			break;
-
-		case ARGTYPE_INT64:
-			*(int64_t *)target = v64;
-			break;
-
-		case ARGTYPE_UINT8:
-			if (vu64 > UINT8_MAX)
-				return false;
-			*(uint8_t *)target = (uint8_t)vu64;
-			break;
-
-		case ARGTYPE_UINT16:
-			if (vu64 > UINT16_MAX)
-				return false;
-			*(uint16_t *)target = (uint16_t)vu64;
-			break;
-
-		case ARGTYPE_UINT32:
-			if (vu64 > UINT32_MAX)
-				return false;
-			*(uint32_t *)target = (uint32_t)vu64;
-			break;
-
-		case ARGTYPE_UINT64:
-			*(uint64_t *)target = vu64;
-			break;
-
-		case ARGTYPE_FLOAT:
-			*(float *)target = (float)vd;
-			break;
-
-		case ARGTYPE_DOUBLE:
-			*(double *)target = vd;
-			break;
-
-		case ARGTYPE_CHAR:
-			if (strlen(arg) > 1)
-			{
-				printf("Argument \"%s\" too long (max 1 character).\n", arg);
-				return false;
-			}
-			*(char *)target = arg[0];
-			break;
-
-		case ARGTYPE_STRING:
-			*(char **)target = arg;
-			break;
-
-		default:
+	case ARGTYPE_INT8:
+		if ((v64 < INT8_MIN) || (v64 > INT8_MAX))
 			return false;
+		*(int8_t *)target = (int8_t)v64;
+		break;
+
+	case ARGTYPE_INT16:
+		if ((v64 < INT16_MIN) || (v64 > INT16_MAX))
+			return false;
+		*(int16_t *)target = (int16_t)v64;
+		break;
+
+	case ARGTYPE_INT32:
+		if ((v64 < INT32_MIN) || (v64 > INT32_MAX))
+			return false;
+		*(int32_t *)target = (int32_t)v64;
+		break;
+
+	case ARGTYPE_INT64:
+		*(int64_t *)target = v64;
+		break;
+
+	case ARGTYPE_UINT8:
+		if (vu64 > UINT8_MAX)
+			return false;
+		*(uint8_t *)target = (uint8_t)vu64;
+		break;
+
+	case ARGTYPE_UINT16:
+		if (vu64 > UINT16_MAX)
+			return false;
+		*(uint16_t *)target = (uint16_t)vu64;
+		break;
+
+	case ARGTYPE_UINT32:
+		if (vu64 > UINT32_MAX)
+			return false;
+		*(uint32_t *)target = (uint32_t)vu64;
+		break;
+
+	case ARGTYPE_UINT64:
+		*(uint64_t *)target = vu64;
+		break;
+
+	case ARGTYPE_FLOAT:
+		*(float *)target = (float)vd;
+		break;
+
+	case ARGTYPE_DOUBLE:
+		*(double *)target = vd;
+		break;
+
+	case ARGTYPE_CHAR:
+		if (strlen(arg) > 1)
+		{
+			printf("Argument \"%s\" too long (max 1 character).\n", arg);
+			return false;
+		}
+		*(char *)target = arg[0];
+		break;
+
+	case ARGTYPE_STRING:
+		*(char **)target = arg;
+		break;
+
+	default:
+		return false;
 	}
-	
+
 	return true;
 }
 
@@ -151,13 +153,16 @@ bool cmdargs_parse(int argc, char *argv[])
 {
 	bool consumed[256] = { false };
 	bool found_args[NUM_ARGS] = { false };
+#ifdef OPTION_TABLE
 	bool found_opts[NUM_OPTS] = { false };
+#endif
 
 	int i, count;
-	printf("argc: %d\n", argc);
+	//printf("argc: %d\n", argc);
 
-	
+
 	// options
+#ifdef OPTION_TABLE
 	count = 0;
 	for (int i = 1; i < argc; i++)
 	{
@@ -223,8 +228,8 @@ bool cmdargs_parse(int argc, char *argv[])
 			}
 		}
 	}
+#endif
 
-	
 	// other arguments
 	count = 0;
 	for (int i = 1; i < argc; i++)
@@ -252,6 +257,7 @@ bool cmdargs_parse(int argc, char *argv[])
 			return false;
 		}
 	}
+#ifdef OPTION_TABLE
 	for (i = 0; i < NUM_OPTS; i++)
 	{
 		if (opt_list[i].arg.required && !found_opts[i])
@@ -260,6 +266,56 @@ bool cmdargs_parse(int argc, char *argv[])
 			return false;
 		}
 	}
+#endif
 
 	return true;
+}
+
+void cmdargs_print_help(char *app_name)
+{
+	printf("%s", app_name);
+
+#ifdef OPTION_TABLE
+	printf(" [options]");
+#endif
+
+	for (int i = 0; i < NUM_ARGS; i++)
+		printf(arg_list[i].required ? " %s" : " [%s]", arg_list[i].short_description);
+	putchar('\n');
+
+#ifdef OPTION_TABLE
+	printf("Options:\n");
+	for (int i = 0; i < NUM_OPTS; i++)
+	{
+		// option and optional parameter
+		char buffer[79];
+		if (opt_list[i].arg.type == ARGTYPE_BOOL)
+		{
+			snprintf(buffer, sizeof(buffer), "  -%c %s",
+					opt_list[i].short_opt, opt_list[i].long_opt);
+		}
+		else
+		{
+			snprintf(buffer, sizeof(buffer), "  -%c %s <%s>",
+					opt_list[i].short_opt, opt_list[i].long_opt,
+					opt_list[i].arg.short_description);
+		}
+		printf("%s", buffer);
+
+		// description
+		const int desc_tab = 32;
+		int len = strlen(buffer);
+		if (len >= (desc_tab - 1))
+		{
+			putchar('\n');
+			len = 0;
+		}
+		while (len < desc_tab)
+		{
+			putchar(' ');
+			len++;
+		}
+		printf("%s\n", opt_list[i].arg.help);
+	}
+#endif
 }
