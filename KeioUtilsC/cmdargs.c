@@ -157,7 +157,7 @@ bool cmdargs_parse(int argc, char *argv[])
 	bool found_opts[NUM_OPTS] = { false };
 #endif
 
-	int i, count;
+	int count = 0;
 	//printf("argc: %d\n", argc);
 
 
@@ -249,7 +249,7 @@ bool cmdargs_parse(int argc, char *argv[])
 	}
 
 	// check if all required arguments were found
-	for (i = 0; i < NUM_ARGS; i++)
+	for (int i = 0; i < NUM_ARGS; i++)
 	{
 		if (arg_list[i].required && !found_args[i])
 		{
@@ -258,7 +258,7 @@ bool cmdargs_parse(int argc, char *argv[])
 		}
 	}
 #ifdef OPTION_TABLE
-	for (i = 0; i < NUM_OPTS; i++)
+	for (int i = 0; i < NUM_OPTS; i++)
 	{
 		if (opt_list[i].arg.required && !found_opts[i])
 		{
